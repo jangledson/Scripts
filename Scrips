@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Scripts em Ing/Por</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Georgia&family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Open+Sans:wght@400;600&family=Plus+Jakarta+Sans:wght@500;700;800&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Bibliotecas para leitura de arquivos -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+
+    <style>
+        :root {
+            --font-app: 'Plus Jakarta Sans', sans-serif;
+            --font-reader: 'Inter', sans-serif;
+            --cor-ingles: #f8fafc;
+            --cor-portugues: #94a3b8;
+            --tamanho-fonte: 20px;
+        }
+
+        html, body {
+            font-family: var(--font-app);
+            background-color: #0f172a;
+            color: #f8fafc;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* --- Prateleira de Biblioteca Estilizada --- */
+        .prateleira-linha {
+            position: relative;
+            padding-bottom: 24px;
+            margin-bottom: 16px;
+            border-bottom: 16px solid #451a03; /* Textura e cor de madeira escura */
+            box-shadow: inset 0 -6px 8px rgba(0, 0, 0, 0.6), 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+            background: linear-gradient(to bottom, transparent 92%, rgba(0, 0, 0, 0.4) 100%);
+        }
+
+        /* Detalhe de relevo da madeira */
+        .prateleira-linha::after {
+            content: '';
+            position: absolute;
+            bottom: -16px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: #78350f;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.8);
+        }
+
+        .card-livro {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        /* --- Leitor com Rolagem Fluida e Largura Total --- */
+        #leitor-conteudo {
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            width: 100%;
+        }
+
+        #leitor-linhas {
+            width: 100%;
+            max-width: 100%;
+        }
+
+        .bloco-paragrafo { 
+            font-family: var(--font-reader); 
+            background-color: rgba(30, 41, 59, 0.4);
+            border-color: #1e293b;
+            width: 100%;
+        }
+
+        .texto-original {
+            color: var(--cor-ingles) !important;
+            font-size: var(--tamanho-fonte) !important;
+            -webkit-user-select: text;
+            user-select: text;
+        }
+
+        .texto-traduzido {
+            color: var(--cor-portugues) !important;
+            font-size: calc(var(--tamanho-fonte) - 2px) !important;
+            -webkit-user-select: text;
+            user-select: text;
+        }
+
+        .btn-audio {
+            transition: transform 0.15s ease;
+        }
+        .btn-audio:active {
+            transform: scale(0.9);
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 min-h-screen flex flex-col">
+
+    <!-- Tela 1: Estante -->
+    <div id="tela-estante" class="flex-grow flex flex-col w-full overflow-x-hidden">
+        <!-- Header Minimalista (Banner "Minha Estante" removido e título ajustado) -->
+        <header class="border-b border-slate-800 bg-slate-900 sticky top-0 z-50 px-6 py-4 w-full">
+            <div class="w-full flex justify-between items-center gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-600 to-amber-800 flex items-center justify-center text-white shadow-lg shadow-amber-900/40 border border-amber-700/50">
+                        <i class="fa-solid fa-book-bookmark text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-lg md:text-xl font-bold tracking-tight text-white">Scripts em Ing/Por</h1>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <label for="input-importar" class="cursor-pointer bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-lg shadow-indigo-600/25 flex items-center gap-2 transition-all active:scale-95 text-sm">
+                        <i class="fa-solid fa-cloud-arrow-up text-base"></i>
+                        <span class="hidden sm:inline">Adicionar Livro</span>
+                    </label>
+                    <input type="file" id="input-importar" accept=".txt,.pdf,.docx,.doc" class="hidden" multiple>
+                </div>
+            </div>
+        </header>
+
+        <!-- Grade de Livros com Prateleiras de Madeira -->
+        <main class="flex-grow p-6 md:p-10 w-full">
+            <div id="estante-vazia" class="hidden text-center py-20 bg-slate-800/40 border border-slate-800 rounded-3xl p-8 max-w-md mx-auto my-auto shadow-2xl">
+                <div class="w-16 h-16 bg-slate-800 text-indigo-400 rounded-2xl flex items-center justify-center mx-auto text-2xl mb-4">
+                    <i class="fa-solid fa-folder-open"></i>
+                </div>
+                <h3 class="text-lg font-bold text-white">Sua biblioteca está vazia</h3>
+                <p class="text-sm text-slate-400 mt-2 mb-6">Importe arquivos em PDF, Word ou TXT em inglês para começar.</p>
+                <button onclick="document.getElementById('input-importar').click()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl text-sm transition-all font-medium">
+                    Selecionar Arquivos
+                </button>
+            </div>
+
+            <!-- Wrapper dos livros onde as prateleiras serão aplicadas -->
+            <div id="cards-wrapper" class="w-full space-y-6">
+                <!-- Cards gerados via JS estruturados em prateleiras -->
+            </div>
+        </main>
+
+        <!-- Botão Flutuante de Configurações no canto inferior direito -->
+        <button id="btn-abrir-config" class="fixed bottom-6 right-6 z-[150] w-14 h-14 rounded-full bg-slate-800 hover:bg-indigo-600 text-slate-200 hover:text-white flex items-center justify-center border border-slate-700 shadow-2xl transition-all active:scale-95" title="Configurações e Gerenciamento">
+            <i class="fa-solid fa-gear text-xl"></i>
+        </button>
+    </div>
+
+    <!-- Tela 2: Leitor Bilíngue -->
+    <div id="tela-leitor" class="hidden fixed inset-0 z-[100] flex flex-col bg-slate-900 text-white w-full overflow-hidden">
+        <!-- Header do Leitor -->
+        <header id="leitor-header" class="h-16 px-4 md:px-8 border-b border-slate-800 flex justify-between items-center bg-slate-900 sticky top-0 z-10 transition-transform duration-200 shrink-0 w-full">
+            <button id="btn-fechar-leitor-topo" class="hover:bg-slate-800 px-3 py-2 rounded-xl transition-colors flex items-center gap-2 text-slate-300 text-sm font-medium">
+                <i class="fa-solid fa-chevron-left text-xs"></i>
+                <span class="hidden md:inline">Voltar</span>
+            </button>
+            
+            <h2 id="leitor-titulo-livro" class="text-sm md:text-base font-bold truncate max-w-[240px] md:max-w-md text-slate-200 text-center">Título do Livro</h2>
+
+            <div class="w-8"></div>
+        </header>
+
+        <!-- Área de Leitura preenchendo toda a largura -->
+        <div id="leitor-conteudo" class="flex-grow px-0 sm:px-4 md:px-8 py-6 flex justify-center no-scrollbar w-full">
+            <div class="w-full space-y-4 pb-32" id="leitor-linhas">
+                <!-- Parágrafos gerados aqui -->
+            </div>
+        </div>
+
+        <!-- Botão Flutuante de Voltar na Parte Inferior Esquerda -->
+        <button id="btn-fechar-leitor-inferior" class="fixed bottom-6 left-6 z-[150] w-12 h-12 rounded-full bg-slate-800/90 hover:bg-indigo-600 text-slate-200 hover:text-white flex items-center justify-center border border-slate-700 shadow-2xl transition-all active:scale-95" title="Voltar para a estante">
+            <i class="fa-solid fa-arrow-left text-base"></i>
+        </button>
+
+        <!-- Barra Centralizada de Páginas -->
+        <div id="container-barra-paginas" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[150] h-12 bg-slate-800/95 backdrop-blur-md rounded-full border border-slate-700 shadow-2xl flex items-center px-3 gap-3">
+            <button id="btn-pagina-anterior" class="w-8 h-8 rounded-full bg-slate-700/80 hover:bg-indigo-600 text-slate-200 hover:text-white flex items-center justify-center transition-all active:scale-95 text-xs" title="Página anterior">
+                <i class="fa-solid fa-chevron-left"></i>
+            </button>
+            
+            <span id="label-pagina-atual" class="text-xs font-bold text-indigo-400 shrink-0 text-center min-w-[65px]">Pág 1/1</span>
+            
+            <button id="btn-pagina-proxima" class="w-8 h-8 rounded-full bg-slate-700/80 hover:bg-indigo-600 text-slate-200 hover:text-white flex items-center justify-center transition-all active:scale-95 text-xs" title="Próxima página">
+                <i class="fa-solid fa-chevron-right"></i>
+            </button>
+        </div>
+
+        <!-- Botão Flutuante de Rolagem Automática Ajustado (Acima do botão de config se necessário, ou posicionado) -->
+        <button id="btn-auto-rolagem" class="fixed bottom-22 right-6 z-[150] w-12 h-12 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center border border-indigo-500/50 shadow-2xl transition-all active:scale-95" title="Ativar rolagem automática">
+            <i id="icone-auto-rolagem" class="fa-solid fa-play text-sm"></i>
+        </button>
+    </div>
+
+    <!-- Modal de Adicionar Capa -->
+    <div id="modal-capa" class="hidden fixed inset-0 z-[200] bg-black/70 flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 w-full max-w-md rounded-3xl p-6 shadow-2xl flex flex-col gap-5">
+            <div class="flex justify-between items-center border-b border-slate-700/60 pb-3">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-image text-indigo-400"></i>
+                    Alterar Capa do Livro
+                </h3>
+                <button id="btn-fechar-capa" class="text-slate-400 hover:text-white text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="space-y-2">
+                <label class="text-xs font-semibold text-slate-300">Cole a URL/Link da Foto na Internet</label>
+                <input type="url" id="input-url-capa" placeholder="https://exemplo.com/imagem.jpg" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500">
+            </div>
+
+            <div class="text-center text-xs text-slate-500 font-semibold uppercase tracking-wider">— OU —</div>
+
+            <div class="space-y-2">
+                <label class="text-xs font-semibold text-slate-300">Escolha uma Imagem do Dispositivo</label>
+                <input type="file" id="input-file-capa" accept="image/*" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2 text-xs text-slate-300 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500">
+            </div>
+
+            <div class="flex flex-col gap-2 pt-2">
+                <button id="btn-salvar-capa" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 rounded-xl transition-all text-sm shadow-lg shadow-indigo-600/25">
+                    Aplicar Capa
+                </button>
+                <button id="btn-remover-capa" class="w-full bg-slate-700/50 hover:bg-red-600/20 text-slate-300 hover:text-red-400 border border-slate-600/50 hover:border-red-500/40 font-semibold py-2 rounded-xl transition-all text-xs">
+                    Remover Capa Personalizada
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Configurações e Gerenciamento -->
+    <div id="modal-config" class="hidden fixed inset-0 z-[200] bg-black/60 flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 w-full max-w-lg rounded-3xl p-6 shadow-2xl flex flex-col gap-5 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b border-slate-700/60 pb-3">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-sliders text-indigo-400"></i>
+                    Configurações e Livros
+                </h3>
+                <button id="btn-fechar-config" class="text-slate-400 hover:text-white text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3">
+                <label class="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <i class="fa-solid fa-books text-indigo-400"></i> Gerenciar Livros na Estante
+                </label>
+                <div id="lista-gerenciar-livros" class="space-y-2 max-h-48 overflow-y-auto bg-slate-900/60 border border-slate-700/50 rounded-2xl p-3">
+                    <!-- Preenchido via JS -->
+                </div>
+            </div>
+
+            <hr class="border-slate-700/60">
+
+            <div class="space-y-2">
+                <div class="flex justify-between text-xs font-semibold text-slate-300">
+                    <span>Velocidade da Rolagem Automática</span>
+                    <span id="label-velocidade-rolagem">1.0</span>
+                </div>
+                <input type="range" id="slider-velocidade" min="0.2" max="3.0" step="0.1" value="1.0" class="w-full accent-indigo-500 cursor-pointer h-2 bg-slate-700 rounded-lg">
+            </div>
+
+            <div class="space-y-2">
+                <div class="flex justify-between text-xs font-semibold text-slate-300">
+                    <span>Tamanho da Fonte</span>
+                    <span id="label-tamanho-fonte">20px</span>
+                </div>
+                <input type="range" id="slider-fonte" min="14" max="32" value="20" class="w-full accent-indigo-500 cursor-pointer h-2 bg-slate-700 rounded-lg">
+            </div>
+
+            <div class="space-y-2">
+                <label class="text-xs font-semibold text-slate-300">Tipo da Fonte</label>
+                <select id="select-fonte" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
+                    <option value="'Inter', sans-serif">Inter (Padrão Clean)</option>
+                    <option value="'Lora', serif">Lora (Estilo Livro / Serifada)</option>
+                    <option value="'Roboto', sans-serif">Roboto (Moderna)</option>
+                    <option value="'Open Sans', sans-serif">Open Sans (Leitura Leve)</option>
+                    <option value="'Georgia', serif">Georgia (Clássica)</option>
+                </select>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-2">
+                    <label class="text-xs font-semibold text-slate-300">Texto em Inglês</label>
+                    <div class="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded-xl p-2">
+                        <input type="color" id="color-ingles" value="#f8fafc" class="w-8 h-8 rounded-lg cursor-pointer bg-transparent border-0">
+                        <span class="text-xs text-slate-400">Escolher cor</span>
+                    </div>
+                </div>
+                <div class="space-y-2">
+                    <label class="text-xs font-semibold text-slate-300">Texto em Português</label>
+                    <div class="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded-xl p-2">
+                        <input type="color" id="color-portugues" value="#94a3b8" class="w-8 h-8 rounded-lg cursor-pointer bg-transparent border-0">
+                        <span class="text-xs text-slate-400">Escolher cor</span>
+                    </div>
+                </div>
+            </div>
+
+            <button id="btn-salvar-config" class="mt-2 w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 rounded-xl transition-all text-sm">
+                Aplicar Configurações
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-6 right-6 z-[300] transform translate-y-12 opacity-0 pointer-events-none transition-all duration-300 bg-slate-800 border border-slate-700 text-slate-200 px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3">
+        <span id="toast-icon">✨</span>
+        <p id="toast-msg" class="text-sm font-medium"></p>
+    </div>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
+        let db;
+        let livrosCache = [];
+        let livroAtivo = null;
+        let livroIdCapaAtual = null;
+        let programmaticallyScrolling = false;
+
+        let configLeitura = {
+            tamanhoFonte: 20,
+            tipoFonte: "'Inter', sans-serif",
+            corIngles: "#f8fafc",
+            corPortugues: "#94a3b8",
+            velocidadeRolagem: 1.0
+        };
+
+        const paletasModernas = [
+            'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
+            'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+            'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+            'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)',
+            'linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%)'
+        ];
+
+        const configSalva = localStorage.getItem("estante_bilingue_config");
+        if (configSalva) {
+            configLeitura = { ...configLeitura, ...JSON.parse(configSalva) };
+        }
+        aplicarVariaveisEstilo();
+
+        const request = indexedDB.open("EstanteBilingueModernDB", 1);
+        request.onerror = () => showToast("Erro ao abrir banco de dados local.", "⚠️");
+        request.onsuccess = (e) => {
+            db = e.target.result;
+            carregarLivrosDaEstante();
+        };
+        request.onupgradeneeded = (e) => {
+            e.target.result.createObjectStore("livros", { keyPath: "id", autoIncrement: true });
+        };
+
+        document.getElementById('input-importar').addEventListener('change', processarArquivosImportados);
+
+        function showToast(message, icon = "ℹ️") {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').innerText = message;
+            document.getElementById('toast-icon').innerText = icon;
+            toast.classList.remove('translate-y-12', 'opacity-0', 'pointer-events-none');
+            setTimeout(() => toast.classList.add('translate-y-12', 'opacity-0', 'pointer-events-none'), 3500);
+        }
+
+        async function processarArquivosImportados(e) {
+            const arquivos = e.target.files;
+            if (!arquivos.length) return;
+
+            showToast("Importando livros...", "⏳");
+
+            for (let arquivo of arquivos) {
+                const extensao = arquivo.name.split('.').pop().toLowerCase();
+                let tituloSemExtensao = arquivo.name.replace(/\.[^/.]+$/, "");
+                
+                try {
+                    let textoExtraido = "";
+                    if (extensao === 'txt') textoExtraido = await lerTxt(arquivo);
+                    else if (extensao === 'docx') textoExtraido = await lerDocx(arquivo);
+                    else if (extensao === 'pdf') textoExtraido = await lerPdf(arquivo);
+                    else if (extensao === 'doc') textoExtraido = await lerDocLegado(arquivo);
+
+                    if (!textoExtraido || !textoExtraido.trim()) continue;
+
+                    const paragrafosOriginais = textoExtraido
+                        .split(/\r?\n\s*\r?\n/)
+                        .map(p => p.trim())
+                        .filter(p => p.length > 0);
+
+                    if (paragrafosOriginais.length === 0) continue;
+
+                    const estruturaLivro = paragrafosOriginais.map((originalText, index) => ({
+                        index: index,
+                        en: originalText,
+                        pt: ""
+                    }));
+
+                    const gradiente = paletasModernas[Math.floor(Math.random() * paletasModernas.length)];
+
+                    const novoLivroObj = {
+                        titulo: tituloSemExtensao,
+                        formato: extensao.toUpperCase(),
+                        conteudo: estruturaLivro,
+                        criadoEm: new Date().getTime(),
+                        gradiente: gradiente,
+                        capa: "",
+                        scrollTop: 0
+                    };
+
+                    salvarLivroNoDB(novoLivroObj);
+
+                } catch (error) {
+                    console.error(error);
+                }
+            }
+            e.target.value = '';
+        }
+
+        function lerTxt(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result);
+                reader.readAsText(file);
+            });
+        }
+
+        function lerDocx(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = e => mammoth.extractRawText({ arrayBuffer: e.target.result }).then(r => resolve(r.value));
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        function lerPdf(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    pdfjsLib.getDocument({ data: e.target.result }).promise.then(async pdf => {
+                        let text = "";
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                            const page = await pdf.getPage(i);
+                            const content = await page.getTextContent();
+                            text += content.items.map(item => item.str).join(" ") + "\n\n";
+                        }
+                        resolve(text);
+                    });
+                };
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        function lerDocLegado(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    const view = new DataView(e.target.result);
+                    let resultStr = "";
+                    for (let i = 0; i < view.byteLength; i++) {
+                        const charCode = view.getUint8(i);
+                        if ((charCode >= 32 && charCode <= 126) || charCode === 10 || charCode === 13) {
+                            resultStr += String.fromCharCode(charCode);
+                        }
+                    }
+                    resolve(resultStr.replace(/\s\s+/g, ' \n\n'));
+                };
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        function salvarLivroNoDB(livro) {
+            const transaction = db.transaction(["livros"], "readwrite");
+            transaction.objectStore("livros").add(livro).onsuccess = () => {
+                showToast(`"${livro.titulo}" adicionado!`, "✨");
+                carregarLivrosDaEstante();
+            };
+        }
+
+        function carregarLivrosDaEstante() {
+            const transaction = db.transaction(["livros"], "readonly");
+            transaction.objectStore("livros").getAll().onsuccess = (e) => {
+                livrosCache = e.target.result || [];
+                renderizarEstanteVisual();
+                renderizarListaGerenciamento();
+            };
+        }
+
+        function deletarLivro(id, event) {
+            if (event) event.stopPropagation();
+            if(!confirm("Deseja remover este livro da estante?")) return;
+
+            const transaction = db.transaction(["livros"], "readwrite");
+            transaction.objectStore("livros").delete(id).onsuccess = () => {
+                showToast("Livro removido.", "🗑️");
+                carregarLivrosDaEstante();
+            };
+        }
+
+        function renderizarEstanteVisual() {
+            const wrapper = document.getElementById('cards-wrapper');
+            const estanteVazia = document.getElementById('estante-vazia');
+            wrapper.innerHTML = '';
+
+            if (livrosCache.length === 0) {
+                estanteVazia.classList.remove('hidden');
+                return;
+            } else {
+                estanteVazia.classList.add('hidden');
+            }
+
+            // Agrupa os livros em linhas de prateleira (ex: até 5 livros por prateleira)
+            const itensPorPrateleira = 5;
+            for (let i = 0; i < livrosCache.length; i += itensPorPrateleira) {
+                const loteLivros = livrosCache.slice(i, i + itensPorPrateleira);
+
+                const prateleiraDiv = document.createElement('div');
+                prateleiraDiv.className = "prateleira-linha w-full";
+
+                const gridLivros = document.createElement('div');
+                gridLivros.className = "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 w-full items-end";
+
+                loteLivros.forEach(livro => {
+                    const card = document.createElement('div');
+                    // Altura da capa reduzida de h-52 para h-36 ou h-40 para nao ficar comprida
+                    card.className = "card-livro group relative bg-slate-800/80 rounded-xl p-2 border border-slate-700/50 cursor-pointer flex flex-col justify-between overflow-hidden shadow-xl w-full";
+                    card.onclick = () => abrirLeitor(livro.id);
+
+                    const temCapaCustom = livro.capa && livro.capa.trim() !== "";
+                    const estiloFundo = temCapaCustom ? "" : `style="background: ${livro.gradiente}"`;
+                    
+                    const conteudoCard = temCapaCustom 
+                        ? `<img src="${livro.capa}" class="absolute inset-0 w-full h-full object-cover">`
+                        : `
+                            <div class="flex justify-between items-center z-10 relative"></div>
+                            <div class="z-10 relative flex items-center justify-center h-full">
+                                <span class="text-xs font-bold text-white text-center px-2 drop-shadow-md truncate max-w-full">${livro.titulo}</span>
+                            </div>
+                        `;
+
+                    card.innerHTML = `
+                        <div class="h-36 w-full rounded-lg p-2 flex flex-col justify-between relative overflow-hidden shadow-md" ${estiloFundo}>
+                            ${conteudoCard}
+                            
+                            <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                                <button onclick="abrirModalCapa(${livro.id}, event)" class="w-7 h-7 rounded-full bg-black/60 hover:bg-indigo-600 text-white flex items-center justify-center transition-all shadow-lg backdrop-blur-sm" title="Alterar Capa">
+                                    <i class="fa-solid fa-image text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    gridLivros.appendChild(card);
+                });
+
+                prateleiraDiv.appendChild(gridLivros);
+                wrapper.appendChild(prateleiraDiv);
+            }
+        }
+
+        function renderizarListaGerenciamento() {
+            const container = document.getElementById('lista-gerenciar-livros');
+            container.innerHTML = '';
+
+            if (livrosCache.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-500 text-center py-3">Nenhum livro na estante.</p>`;
+                return;
+            }
+
+            livrosCache.forEach(livro => {
+                const item = document.createElement('div');
+                item.className = "flex items-center justify-between gap-3 bg-slate-800/90 border border-slate-700/60 rounded-xl px-3 py-2";
+
+                item.innerHTML = `
+                    <span class="text-xs font-medium text-slate-200 truncate max-w-[260px]">${livro.titulo}</span>
+                    <button onclick="deletarLivro(${livro.id}, event); abrirModalConfig();" class="bg-red-500/10 hover:bg-red-600 text-red-400 hover:text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 shrink-0 border border-red-500/20">
+                        <i class="fa-solid fa-trash-can text-xs"></i> Excluir
+                    </button>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        /* --- Modal e Gerenciamento de Capas --- */
+        const modalCapa = document.getElementById('modal-capa');
+        const inputUrlCapa = document.getElementById('input-url-capa');
+        const inputFileCapa = document.getElementById('input-file-capa');
+
+        function abrirModalCapa(id, event) {
+            if (event) event.stopPropagation();
+            livroIdCapaAtual = id;
+            const livro = livrosCache.find(l => l.id === id);
+            
+            inputUrlCapa.value = (livro && livro.capa && !livro.capa.startsWith('data:')) ? livro.capa : '';
+            inputFileCapa.value = '';
+            modalCapa.classList.remove('hidden');
+        }
+
+        document.getElementById('btn-fechar-capa').onclick = () => modalCapa.classList.add('hidden');
+
+        document.getElementById('btn-salvar-capa').onclick = async () => {
+            if (!livroIdCapaAtual) return;
+            const livro = livrosCache.find(l => l.id === livroIdCapaAtual);
+            if (!livro) return;
+
+            let novaCapa = "";
+
+            if (inputFileCapa.files && inputFileCapa.files[0]) {
+                const file = inputFileCapa.files[0];
+                novaCapa = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = e => resolve(e.target.result);
+                    reader.readAsDataURL(file);
+                });
+            } else if (inputUrlCapa.value.trim() !== "") {
+                novaCapa = inputUrlCapa.value.trim();
+            }
+
+            if (novaCapa) {
+                livro.capa = novaCapa;
+                atualizarLivroNoDB(livro);
+                carregarLivrosDaEstante();
+                showToast("Capa alterada com sucesso!", "🖼️");
+            }
+
+            modalCapa.classList.add('hidden');
+        };
+
+        document.getElementById('btn-remover-capa').onclick = () => {
+            if (!livroIdCapaAtual) return;
+            const livro = livrosCache.find(l => l.id === livroIdCapaAtual);
+            if (!livro) return;
+
+            livro.capa = "";
+            atualizarLivroNoDB(livro);
+            carregarLivrosDaEstante();
+            modalCapa.classList.add('hidden');
+            showToast("Capa removida.", "🗑️");
+        };
+
+        /* --- Leitor Bilíngue --- */
+        const leitorConteudo = document.getElementById('leitor-conteudo');
+        const labelPaginaAtual = document.getElementById('label-pagina-atual');
+        const btnPaginaAnterior = document.getElementById('btn-pagina-anterior');
+        const btnPaginaProxima = document.getElementById('btn-pagina-proxima');
+
+        function abrirLeitor(livroId) {
+            livroAtivo = livrosCache.find(l => l.id === livroId);
+            if (!livroAtivo) return;
+
+            document.getElementById('leitor-titulo-livro').innerText = livroAtivo.titulo;
+            document.getElementById('tela-estante').classList.add('hidden');
+            document.getElementById('tela-leitor').classList.remove('hidden');
+
+            pararAutoRolagem();
+            renderizarLinhasLeitura();
+
+            setTimeout(() => {
+                programmaticallyScrolling = true;
+                const maxScroll = leitorConteudo.scrollHeight - leitorConteudo.clientHeight;
+                if (livroAtivo.scrollTop && maxScroll > 0) {
+                    leitorConteudo.scrollTop = livroAtivo.scrollTop;
+                } else {
+                    leitorConteudo.scrollTop = 0;
+                }
+                atualizarBarraProgresso();
+                setTimeout(() => { programmaticallyScrolling = false; }, 100);
+            }, 50);
+
+            iniciarTraducaoAutomatica();
+        }
+
+        function fecharLeitor() {
+            window.speechSynthesis.cancel();
+            pararAutoRolagem();
+            if (livroAtivo) {
+                livroAtivo.scrollTop = leitorConteudo.scrollTop;
+                atualizarLivroNoDB(livroAtivo);
+            }
+            document.getElementById('tela-leitor').classList.add('hidden');
+            document.getElementById('tela-estante').classList.remove('hidden');
+            livroAtivo = null;
+        }
+
+        document.getElementById('btn-fechar-leitor-topo').onclick = fecharLeitor;
+        document.getElementById('btn-fechar-leitor-inferior').onclick = fecharLeitor;
+
+        function renderizarLinhasLeitura() {
+            const container = document.getElementById('leitor-linhas');
+            container.innerHTML = '';
+
+            livroAtivo.conteudo.forEach((bloco) => {
+                const parDiv = document.createElement('div');
+                parDiv.className = `bloco-paragrafo border rounded-2xl p-5 md:p-6 transition-all duration-200 flex flex-col gap-3 shadow-sm w-full`;
+                parDiv.dataset.index = bloco.index;
+
+                const enHeader = document.createElement('div');
+                enHeader.className = "flex items-start justify-between gap-4 w-full";
+
+                const enDiv = document.createElement('div');
+                enDiv.className = "texto-original font-semibold leading-relaxed tracking-wide flex-grow w-full";
+                enDiv.innerText = bloco.en;
+
+                const btnAudio = document.createElement('button');
+                btnAudio.className = "btn-audio shrink-0 w-10 h-10 rounded-xl bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 hover:text-indigo-300 flex items-center justify-center transition-colors border border-indigo-500/20";
+                btnAudio.title = "Ouvir em inglês";
+                btnAudio.innerHTML = `<i class="fa-solid fa-volume-high text-base"></i>`;
+                btnAudio.onclick = (e) => {
+                    e.stopPropagation();
+                    falarTextoIngles(bloco.en, btnAudio);
+                };
+
+                enHeader.appendChild(enDiv);
+                enHeader.appendChild(btnAudio);
+
+                const ptDiv = document.createElement('div');
+                ptDiv.className = "texto-traduzido leading-relaxed border-t border-slate-700/30 pt-3 w-full";
+
+                if (bloco.pt) {
+                    ptDiv.innerHTML = `<span>${bloco.pt}</span>`;
+                } else {
+                    ptDiv.innerHTML = `
+                        <span class="text-indigo-400 text-xs font-sans flex items-center gap-2 animate-pulse">
+                            <i class="fa-solid fa-spinner animate-spin"></i> Traduzindo...
+                        </span>
+                    `;
+                }
+
+                parDiv.appendChild(enHeader);
+                parDiv.appendChild(ptDiv);
+                container.appendChild(parDiv);
+            });
+        }
+
+        function calcularTotalPaginas() {
+            const maxScroll = leitorConteudo.scrollHeight - leitorConteudo.clientHeight;
+            if (maxScroll <= 0) return 1;
+            const alturaPagina = 500;
+            return Math.max(1, Math.ceil(leitorConteudo.scrollHeight / alturaPagina));
+        }
+
+        function atualizarBarraProgresso() {
+            const maxScroll = leitorConteudo.scrollHeight - leitorConteudo.clientHeight;
+            const totalPaginas = calcularTotalPaginas();
+            
+            const scrollAtual = leitorConteudo.scrollTop;
+            const paginaAtual = Math.min(totalPaginas, Math.max(1, Math.floor((scrollAtual / maxScroll) * (totalPaginas - 1)) + 1));
+            
+            labelPaginaAtual.innerText = `Pág ${paginaAtual}/${totalPaginas}`;
+        }
+
+        leitorConteudo.addEventListener('scroll', () => {
+            if (!programmaticallyScrolling) {
+                atualizarBarraProgresso();
+                if (livroAtivo) {
+                    livroAtivo.scrollTop = leitorConteudo.scrollTop;
+                    atualizarLivroNoDB(livroAtivo);
+                }
+            }
+        });
+
+        btnPaginaProxima.onclick = () => {
+            programmaticallyScrolling = true;
+            const totalPaginas = calcularTotalPaginas();
+            const maxScroll = leitorConteudo.scrollHeight - leitorConteudo.clientHeight;
+            if (maxScroll <= 0) return;
+
+            let scrollAtual = leitorConteudo.scrollTop;
+            let paginaAtual = Math.min(totalPaginas, Math.max(1, Math.floor((scrollAtual / maxScroll) * (totalPaginas - 1)) + 1));
+            
+            let proximaPagina = Math.min(totalPaginas, paginaAtual + 1);
+            if (totalPaginas > 1) {
+                const proporcao = (proximaPagina - 1) / (totalPaginas - 1);
+                leitorConteudo.scrollTop = proporcao * maxScroll;
+            }
+            atualizarBarraProgresso();
+            if (livroAtivo) {
+                livroAtivo.scrollTop = leitorConteudo.scrollTop;
+                atualizarLivroNoDB(livroAtivo);
+            }
+            setTimeout(() => { programmaticallyScrolling = false; }, 50);
+        };
+
+        btnPaginaAnterior.onclick = () => {
+            programmaticallyScrolling = true;
+            const totalPaginas = calcularTotalPaginas();
+            const maxScroll = leitorConteudo.scrollHeight - leitorConteudo.clientHeight;
+            if (maxScroll <= 0) return;
+
+            let scrollAtual = leitorConteudo.scrollTop;
+            let paginaAtual = Math.min(totalPaginas, Math.max(1, Math.floor((scrollAtual / maxScroll) * (totalPaginas - 1)) + 1));
+            
+            let paginaAnterior = Math.max(1, paginaAtual - 1);
+            if (totalPaginas > 1) {
+                const proporcao = (paginaAnterior - 1) / (totalPaginas - 1);
+                leitorConteudo.scrollTop = proporcao * maxScroll;
+            }
+            atualizarBarraProgresso();
+            if (livroAtivo) {
+                livroAtivo.scrollTop = leitorConteudo.scrollTop;
+                atualizarLivroNoDB(livroAtivo);
+            }
+            setTimeout(() => { programmaticallyScrolling = false; }, 50);
+        };
+
+        /* --- Controle de Rolagem Automática Fluida --- */
+        let autoRolagemAtiva = false;
+        let animationFrameId = null;
+        let posicaoAcumulada = 0;
+        const btnAutoRolagem = document.getElementById('btn-auto-rolagem');
+        const iconeAutoRolagem = document.getElementById('icone-auto-rolagem');
+
+        function alternarAutoRolagem() {
+            if (!autoRolagemAtiva) {
+                iniciarAutoRolagem();
+            } else {
+                pararAutoRolagem();
+            }
+        }
+
+        function iniciarAutoRolagem() {
+            autoRolagemAtiva = true;
+            iconeAutoRolagem.className = "fa-solid fa-pause text-sm";
+            btnAutoRolagem.classList.remove('bg-indigo-600', 'hover:bg-indigo-500');
+            btnAutoRolagem.classList.add('bg-amber-600', 'hover:bg-amber-500');
+
+            posicaoAcumulada = leitorConteudo.scrollTop;
+
+            function step() {
+                if (!autoRolagemAtiva) return;
+                
+                posicaoAcumulada += configLeitura.velocidadeRolagem * 0.4;
+                leitorConteudo.scrollTop = posicaoAcumulada;
+
+                if (leitorConteudo.scrollTop + leitorConteudo.clientHeight >= leitorConteudo.scrollHeight - 5) {
+                    pararAutoRolagem();
+                    return;
+                }
+
+                animationFrameId = requestAnimationFrame(step);
+            }
+            animationFrameId = requestAnimationFrame(step);
+        }
+
+        function pararAutoRolagem() {
+            autoRolagemAtiva = false;
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+            iconeAutoRolagem.className = "fa-solid fa-play text-sm";
+            btnAutoRolagem.classList.remove('bg-amber-600', 'hover:bg-amber-500');
+            btnAutoRolagem.classList.add('bg-indigo-600', 'hover:bg-indigo-500');
+        }
+
+        btnAutoRolagem.onclick = alternarAutoRolagem;
+
+        leitorConteudo.addEventListener('touchstart', () => {
+            if (autoRolagemAtiva) pararAutoRolagem();
+        }, { passive: true });
+
+        let clickTimer = null;
+        let emTelaCheia = false;
+        const leitorHeader = document.getElementById('leitor-header');
+        const btnFecharInferior = document.getElementById('btn-fechar-leitor-inferior');
+        const containerBarraPaginas = document.getElementById('container-barra-paginas');
+
+        leitorConteudo.addEventListener('click', (e) => {
+            if (e.target.closest('.btn-audio') || e.target.closest('#btn-auto-rolagem') || e.target.closest('#container-barra-paginas') || window.getSelection().toString().length > 0) return;
+
+            if (clickTimer == null) {
+                clickTimer = setTimeout(() => {
+                    clickTimer = null;
+                    if (!emTelaCheia) {
+                        emTelaCheia = true;
+                        leitorHeader.classList.add('-translate-y-full');
+                        btnFecharInferior.classList.add('opacity-0', 'pointer-events-none');
+                        containerBarraPaginas.classList.add('opacity-0', 'pointer-events-none');
+                        btnAutoRolagem.classList.add('opacity-0', 'pointer-events-none');
+                    }
+                }, 250);
+            } else {
+                clearTimeout(clickTimer);
+                clickTimer = null;
+                if (emTelaCheia) {
+                    emTelaCheia = false;
+                    leitorHeader.classList.remove('-translate-y-full');
+                    btnFecharInferior.classList.remove('opacity-0', 'pointer-events-none');
+                    containerBarraPaginas.classList.remove('opacity-0', 'pointer-events-none');
+                    btnAutoRolagem.classList.remove('opacity-0', 'pointer-events-none');
+                }
+            }
+        });
+
+        function falarTextoIngles(texto, botao) {
+            if (!('speechSynthesis' in window)) return;
+
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(texto);
+            utterance.lang = 'en-US';
+            utterance.rate = 0.9;
+
+            utterance.onstart = () => botao.classList.add('bg-indigo-600', 'text-white', 'animate-pulse');
+            utterance.onend = () => botao.classList.remove('bg-indigo-600', 'text-white', 'animate-pulse');
+            utterance.onerror = () => botao.classList.remove('bg-indigo-600', 'text-white', 'animate-pulse');
+
+            window.speechSynthesis.speak(utterance);
+        }
+
+        async function iniciarTraducaoAutomatica() {
+            if (!livroAtivo) return;
+
+            for (let bloco of livroAtivo.conteudo) {
+                if (!livroAtivo) break;
+                if (bloco.pt) continue;
+
+                const traducao = await chamarTradutorApi(bloco.en);
+
+                if (traducao) {
+                    bloco.pt = traducao;
+                    const blocoElement = document.querySelector(`.bloco-paragrafo[data-index="${bloco.index}"]`);
+                    if (blocoElement) {
+                        blocoElement.querySelector('.texto-traduzido').innerHTML = `<span>${traducao}</span>`;
+                    }
+                    atualizarLivroNoDB(livroAtivo);
+                }
+
+                await new Promise(r => setTimeout(r, 350));
+            }
+        }
+
+        async function chamarTradutorApi(textoIngles) {
+            try {
+                const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(textoIngles)}&langpair=en|pt-br`;
+                const response = fileFetchOrSimilar => fetch(url);
+                const data = await (await response()).json();
+                if(data.responseData && data.responseData.translatedText) {
+                    return data.responseData.translatedText;
+                }
+                return null;
+            } catch (err) {
+                return null;
+            }
+        }
+
+        function atualizarLivroNoDB(livro) {
+            const transaction = db.transaction(["livros"], "readwrite");
+            transaction.objectStore("livros").put(livro);
+        }
+
+        /* --- Modal de Configurações --- */
+        const modalConfig = document.getElementById('modal-config');
+        const sliderVelocidade = document.getElementById('slider-velocidade');
+        const labelVelocidadeRolagem = document.getElementById('label-velocidade-rolagem');
+        const sliderFonte = document.getElementById('slider-fonte');
+        const labelTamanhoFonte = document.getElementById('label-tamanho-fonte');
+        const selectFonte = document.getElementById('select-fonte');
+        const colorIngles = document.getElementById('color-ingles');
+        const colorPortugues = document.getElementById('color-portugues');
+
+        function abrirModalConfig() {
+            sliderVelocidade.value = configLeitura.velocidadeRolagem;
+            labelVelocidadeRolagem.innerText = configLeitura.velocidadeRolagem;
+            sliderFonte.value = configLeitura.tamanhoFonte;
+            labelTamanhoFonte.innerText = `${configLeitura.tamanhoFonte}px`;
+            selectFonte.value = configLeitura.tipoFonte;
+            colorIngles.value = configLeitura.corIngles;
+            colorPortugues.value = configLeitura.corPortugues;
+            renderizarListaGerenciamento();
+            modalConfig.classList.remove('hidden');
+        }
+
+        document.getElementById('btn-abrir-config').onclick = abrirModalConfig;
+        document.getElementById('btn-fechar-config').onclick = () => modalConfig.classList.add('hidden');
+
+        sliderVelocidade.oninput = (e) => {
+            labelVelocidadeRolagem.innerText = e.target.value;
+        };
+
+        sliderFonte.oninput = (e) => {
+            labelTamanhoFont.innerText = `${e.target.value}px`;
+        };
+
+        document.getElementById('btn-salvar-config').onclick = () => {
+            configLeitura.velocidadeRolagem = parseFloat(sliderVelocidade.value);
+            configLeitura.tamanhoFonte = parseInt(sliderFonte.value);
+            configLeiritual = selectFonte.value;
+            configLeitura.tipoFonte = selectFonte.value;
+            configLeitura.corIngles = colorIngles.value;
+            configLeitura.corPortugues = colorPortugues.value;
+
+            localStorage.setItem("estante_bilingue_config", JSON.stringify(configLeitura));
+            aplicarVariaveisEstilo();
+            modalConfig.classList.add('hidden');
+            showToast("Configurações salvas!", "⚙️");
+        };
+
+        function aplicarVariaveisEstilo() {
+            document.documentElement.style.setProperty('--tamanho-fonte', `${configLeitura.tamanhoFonte}px`);
+            document.documentElement.style.setProperty('--font-reader', configLeitura.tipoFonte);
+            document.documentElement.style.setProperty('--cor-ingles', configLeitura.corIngles);
+            document.documentElement.style.setProperty('--cor-portugues', configLeitura.corPortugues);
+        }
+    </script>
+</body>
+</html>
